@@ -16,7 +16,14 @@ console.log(testUI);
 // 3DM Loader functions
 
 /**
- * Fetch3DM: Loads 3dm model and returns model children and materials. Takes arguments to set if model receives or casts shadows.
+ * Fetch3DM:
+ * Loads 3dm model and returns model children and materials. Takes arguments to set if model receives or casts shadows.
+ *
+ * General Notes:
+ * This function returns information and geometry within the target 3dm file. The goals of this function is to return key information such as
+ * - Geometry
+ * - Geometry, sorted by layer or group
+ * - Materials applied to geometry (but not unused materials to reduce load time)
  *
  * @param {string} url string: filepath
  * @param {bool} castShadow  bool: True to cast shadows
@@ -49,12 +56,15 @@ export default async function Fetch3DM(url, castShadow, receiveShadow) {
         console.log(object);
 
         function ConstructLayerTable() {
+          /**
+           * Recursively lookup layers in model and store layers in dict referencing to main layer    TODO: Revise to Class Obj?
+           * Ideas:
+           * Check if "::" is NOT in layer name, if true this means that layer is a main layer  -> MainLayers
+           * Check all layers to find if main layer matches and only one "::" occurs, and write to secondary layer       -> SecondLayers
+           */
           const layers = object.userData.layers;
+          const layerTree = [];
           const mainLayers = [];
-          const layerDict = {
-            parent: "",
-            subLayers: [],
-          };
 
           layers.forEach((layer, i) => {
             console.log(layer);
@@ -63,14 +73,22 @@ export default async function Fetch3DM(url, castShadow, receiveShadow) {
               mainLayers.push(layer.name);
             }
           });
+
           mainLayers.forEach((layer) => {
+            const layerDict = {
+              parent: layer,
+              subLayers: [],
+            };
             layers.forEach((item) => {
-              if (item.fullPath.includes(layer)) {
-                console.log(item.name);
+              if (item.fullPath === layer) {
+                layerDict.main = item;
+              } else if (item.fullPath.includes(layer)) {
+                layerDict.subLayers.push(item);
               }
             });
-            console.log(" ");
+            layerTree.push(layerDict);
           });
+          console.log(layerTree);
         }
         ConstructLayerTable();
 
